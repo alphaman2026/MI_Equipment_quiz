@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>반도체 MI 퀴즈 — Metrology &amp; Inspection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f1620;
+    --panel:#182330;
+    --panel2:#1f2d3d;
+    --line:#2b3d51;
+    --text:#e7edf3;
+    --muted:#8ea0b3;
+    --teal:#3ec1b8;
+    --gold:#e9b949;
+    --good:#4cd38a;
+    --bad:#ef6363;
+    --die:#26394d;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    line-height:1.55;
+    display:flex;justify-content:center;align-items:flex-start;
+    padding:24px 16px 48px;
+  }
+  .app{width:100%;max-width:560px}
+
+  /* header */
+  .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+  .top h1{font-size:20px;font-weight:700;letter-spacing:-.01em}
+  .top h1 small{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:2px}
+  .badge{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;color:var(--muted);white-space:nowrap}
+  .badge b{color:var(--gold);font-weight:600}
+
+  /* wafer */
+  .wafer-wrap{display:flex;justify-content:center;margin:6px 0 20px}
+  svg.wafer{width:190px;height:190px}
+  .die{fill:var(--die);stroke:var(--bg);stroke-width:1.2;transition:fill .35s}
+  .die.ok{fill:var(--good)}
+  .die.ng{fill:var(--bad)}
+  .die.cur{fill:var(--gold);animation:pulse 1s infinite alternate}
+  @keyframes pulse{from{opacity:1}to{opacity:.45}}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px}
+  .card p.lead{color:var(--muted);font-size:14.5px;margin-top:10px}
+  .card h2{font-size:22px;font-weight:700;letter-spacing:-.01em}
+
+  .rules{margin:18px 0 22px;padding:14px 16px;background:var(--panel2);border-radius:10px;font-size:14px;color:var(--muted)}
+  .rules li{list-style:none;padding:3px 0}
+  .rules li::before{content:"";display:inline-block;width:8px;height:8px;background:var(--teal);margin-right:10px;border-radius:2px;vertical-align:1px}
+
+  .btn{
+    width:100%;background:var(--teal);color:#062421;border:0;border-radius:10px;
+    padding:14px 18px;font:inherit;font-size:16px;font-weight:700;cursor:pointer;
+    transition:transform .1s, filter .15s;
+  }
+  .btn:hover{filter:brightness(1.08)}
+  .btn:active{transform:scale(.985)}
+  .btn:focus-visible,.opt:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line);margin-top:10px;font-weight:500}
+
+  /* quiz */
+  .meta{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:8px}
+  .timer{height:6px;background:var(--panel2);border-radius:3px;overflow:hidden;margin-bottom:18px}
+  .timer i{display:block;height:100%;background:var(--teal);width:100%;transition:width 1s linear}
+  .timer i.warn{background:var(--bad)}
+  .q{font-size:18px;font-weight:600;line-height:1.5;margin-bottom:18px;word-break:keep-all}
+  .opts{display:grid;gap:9px}
+  .opt{
+    text-align:left;background:var(--panel2);color:var(--text);border:1px solid var(--line);
+    border-radius:10px;padding:13px 14px;font:inherit;font-size:15px;cursor:pointer;
+    display:flex;gap:12px;align-items:flex-start;transition:border-color .15s,background .15s;
+    word-break:keep-all;
+  }
+  .opt:hover:not(:disabled){border-color:var(--teal)}
+  .opt:disabled{cursor:default}
+  .opt .k{flex:0 0 22px;height:22px;border-radius:6px;background:var(--line);color:var(--muted);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;margin-top:1px}
+  .opt.right{border-color:var(--good);background:rgba(76,211,138,.12)}
+  .opt.right .k{background:var(--good);color:#062421}
+  .opt.wrong{border-color:var(--bad);background:rgba(239,99,99,.12)}
+  .opt.wrong .k{background:var(--bad);color:#fff}
+
+  .explain{margin-top:16px;padding:14px 16px;border-radius:10px;background:var(--panel2);font-size:14px;color:var(--muted);border-left:3px solid var(--gold);word-break:keep-all}
+  .explain b{color:var(--text)}
+  .explain.hidden,.hidden{display:none}
+  .next{margin-top:14px}
+
+  /* result */
+  .score{display:flex;align-items:baseline;gap:8px;margin:6px 0 2px}
+  .score .n{font-size:56px;font-weight:700;color:var(--gold);line-height:1;letter-spacing:-.02em}
+  .score .u{font-size:16px;color:var(--muted)}
+  .grade{font-size:18px;font-weight:600;color:var(--teal);margin-bottom:6px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:18px 0}
+  .stat{background:var(--panel2);border-radius:10px;padding:12px;text-align:center}
+  .stat b{display:block;font-size:20px;font-weight:700}
+  .stat span{font-size:12px;color:var(--muted)}
+  .review{margin-top:6px;font-size:14px}
+  .review summary{cursor:pointer;color:var(--muted);padding:6px 0}
+  .review li{list-style:none;padding:8px 0;border-top:1px solid var(--line);word-break:keep-all}
+  .review li.ng{color:var(--muted)}
+  .review li .m{font-weight:600;margin-right:6px}
+  .review li.ok .m{color:var(--good)}
+  .review li.ng .m{color:var(--bad)}
+
+  .field{margin:16px 0 4px}
+  .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+  .field input{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:13px 14px;font:inherit;font-size:16px;color:var(--text)}
+  .field input:focus{outline:none;border-color:var(--teal)}
+  .err{font-size:13px;color:var(--bad);min-height:18px;margin:4px 0 8px}
+  .who{font-size:13px;color:var(--muted)}
+  .nick{font-size:34px;font-weight:700;color:var(--text);letter-spacing:-.02em;line-height:1.2;margin-bottom:12px;word-break:break-all}
+  .rank{margin-top:22px}
+  .rank h3{font-size:15px;font-weight:600;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+  .rank h3 button{background:none;border:0;color:var(--muted);font:inherit;font-size:12px;cursor:pointer;text-decoration:underline}
+  .rank table{width:100%;border-collapse:collapse;font-size:14px}
+  .rank td{padding:9px 6px;border-top:1px solid var(--line)}
+  .rank td:first-child{width:36px;color:var(--muted);font-weight:600}
+  .rank td:last-child{text-align:right;font-weight:600;color:var(--gold)}
+  .rank tr.me td{background:rgba(62,193,184,.12)}
+  .rank tr.me td:nth-child(2)::after{content:" (나)";color:var(--teal);font-size:12px}
+  .rank .empty{color:var(--muted);font-size:14px;padding:10px 0}
+  .rank .sub{color:var(--muted);font-size:12px;font-weight:400;margin-left:6px}
+  .wrong-box{margin-top:6px}
+  .wrong-box h3{font-size:15px;font-weight:600;margin-bottom:6px;color:var(--bad)}
+  .wrong-box li{list-style:none;padding:12px 0;border-top:1px solid var(--line);word-break:keep-all}
+  .wrong-box .wq{font-weight:600;font-size:14.5px;margin-bottom:6px}
+  .wrong-box .wa{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;margin-bottom:8px}
+  .wrong-box .x{color:var(--bad)}
+  .wrong-box .o{color:var(--good);font-weight:600}
+  .wrong-box .we{font-size:13.5px;color:var(--muted);line-height:1.6;padding-left:10px;border-left:2px solid var(--gold)}
+  .author{display:inline-block;margin-top:12px;padding:6px 12px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);font-size:13px;color:var(--muted)}
+  .author b{color:var(--gold);font-weight:600}
+  .foot{margin-top:14px;text-align:center;font-size:12px;color:var(--muted)}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <h1>반도체 MI 퀴즈<small>Metrology &amp; Inspection · 설비</small></h1>
+    <div class="badge">점수 <b id="scoreBadge">0</b></div>
+  </div>
+
+  <div class="wafer-wrap">
+    <svg class="wafer" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="50" r="49" fill="#1a2532"/>
+      <g id="dies"></g>
+      <circle cx="50" cy="50" r="49" fill="none" stroke="#3a4f66" stroke-width="1.5"/>
+      <rect x="35" y="96" width="30" height="4" fill="#0f1620"/>
+    </svg>
+  </div>
+
+  <!-- 시작 화면 -->
+  <section class="card" id="start">
+    <h2>웨이퍼 한 장, 10문제</h2>
+    <p class="lead">검사 장비(Brightfield·Darkfield·E-beam·리뷰 SEM), 계측 장비(CD-SEM·OCD·오버레이·엘립소·XRF·AFM)의 원리와 운용, 그리고 툴 매칭·GR&amp;R·일일 QC·샘플링 같은 설비 관리까지 묻습니다. 정답이면 다이가 살고, 오답이면 불량 처리됩니다.</p>
+    <div class="author">출제 <b>최병삼 MI 설비VCT</b></div>
+    <ul class="rules">
+      <li>문제당 20초, 시간 초과는 오답</li>
+      <li>정답 10점 + 빠르게 맞히면 최대 5점 보너스</li>
+      <li>매 판마다 문제와 보기 순서가 바뀝니다</li>
+    </ul>
+    <div class="field">
+      <label for="nickInput">닉네임</label>
+      <input id="nickInput" maxlength="12" placeholder="예: MI 설비 김프로" autocomplete="off">
+    </div>
+    <div class="err" id="nickErr"></div>
+    <button class="btn" id="startBtn">퀴즈 시작</button>
+  </section>
+
+  <!-- 문제 화면 -->
+  <section class="card hidden" id="quiz">
+    <div class="meta"><span id="progress">1 / 10</span><span id="timeLeft">20초</span></div>
+    <div class="timer"><i id="timerBar"></i></div>
+    <div class="q" id="qText"></div>
+    <div class="opts" id="opts"></div>
+    <div class="explain hidden" id="explain"></div>
+    <button class="btn next hidden" id="nextBtn">다음 문제</button>
+  </section>
+
+  <!-- 결과 화면 -->
+  <section class="card hidden" id="result">
+    <div class="who">이번 판 결과 · 출제 최병삼 MI 설비VCT</div>
+    <div class="nick" id="resNick"></div>
+    <div class="score"><span class="n" id="finalScore">0</span><span class="u">/ 150점</span></div>
+    <div class="grade" id="grade"></div>
+    <p class="lead" id="comment"></p>
+    <div class="stats">
+      <div class="stat"><b id="stCorrect">0</b><span>정답</span></div>
+      <div class="stat"><b id="stYield">0%</b><span>수율</span></div>
+      <div class="stat"><b id="stBest">0</b><span>최고 점수</span></div>
+    </div>
+    <div class="rank">
+      <h3>순위<button id="clearRank" type="button">순위 초기화</button></h3>
+      <table id="rankTable"></table>
+    </div>
+    <div class="wrong-box">
+      <h3 id="wrongTitle"></h3>
+      <ul id="wrongList"></ul>
+    </div>
+    <details class="review"><summary>맞힌 문제 보기</summary><ul id="reviewList"></ul></details>
+    <button class="btn" id="retryBtn">다시 도전</button>
+    <button class="btn ghost" id="shareBtn">결과 복사</button>
+  </section>
+
+  <div class="foot">반도체 MI 퀴즈 · 총 24문제 중 10문제 랜덤 출제 · 출제 최병삼 MI 설비VCT</div>
+</div>
+
+<script>
+const BANK = [
+  {q:"MI에서 Metrology와 Inspection의 역할 구분으로 맞는 것은?", a:["둘 다 결함 위치만 찾는다","Metrology는 CD·두께·오버레이 같은 값을 재고, Inspection은 결함 유무와 위치를 찾는다","Metrology는 후공정 전용이다","Inspection은 값을 재고 Metrology는 결함을 찾는다"], c:1,
+   e:"계측(Metrology)은 '얼마인가'를 숫자로, 검사(Inspection)는 '결함이 어디 있는가'를 좌표로 답합니다. 두 데이터가 합쳐져 공정 관리와 수율 분석의 기반이 됩니다."},
+  {q:"패턴 웨이퍼 결함 검사에서 Brightfield(명시야) 검사 장비의 기본 원리는?", a:["레이저 산란광만 검출","광대역 광원으로 찍은 이미지를 인접 다이와 비교해 차이를 결함으로 판정","전자빔 스캔","X선 투과"], c:1,
+   e:"명시야 검사는 UV·DUV 광대역 광원으로 웨이퍼 이미지를 얻고 Die-to-Die 또는 Cell-to-Cell 비교로 결함을 찾습니다. 패턴 결함(브릿지, 오픈, 파티클)에 두루 쓰이는 인라인 검사의 주력입니다."},
+  {q:"Darkfield(암시야) 레이저 검사 장비가 특히 강점을 갖는 대상은?", a:["패턴 내부 미세 브릿지","베어 웨이퍼·비패턴 막 위의 파티클과 스크래치","전기적 오픈","도핑 농도"], c:1,
+   e:"암시야는 비스듬히 쏜 레이저의 산란광만 모으므로 매끈한 표면 위 작은 파티클에 매우 민감하고 처리량이 높습니다. 베어 웨이퍼 입고 검사, 장비 파티클 모니터(PWP)에 주로 씁니다."},
+  {q:"장비가 웨이퍼 한 장을 처리할 때 새로 더하는 파티클 수를 평가하는 지표는?", a:["PWP(Particle per Wafer Pass)","D0","Cpk","WPH"], c:0,
+   e:"PWP는 장비 통과 전후 베어 웨이퍼를 암시야로 검사해 늘어난 파티클 수를 셉니다. 장비 청정도 관리와 PM 후 복구 판정의 기본 항목입니다."},
+  {q:"수십 nm 이하 미세 결함이나 전기적 결함을 잡기 위해 쓰는 검사 장비는?", a:["E-beam 검사","매크로 검사","광학 현미경","AFM"], c:0,
+   e:"E-beam 검사는 광학 해상 한계 아래 결함을 잡고, 전압 콘트라스트(VC)로 컨택 오픈·쇼트 같은 전기적 결함까지 검출합니다. 처리량이 낮아 핫스팟 위주로 검사합니다."},
+  {q:"E-beam 검사에서 컨택이 아래층과 연결됐는지를 밝기 차이로 판정하는 원리는?", a:["형광","전압 콘트라스트(Voltage Contrast)","회절","간섭"], c:1,
+   e:"전자빔을 쏘면 접지된 컨택은 전하가 빠져나가 밝게, 오픈된 컨택은 대전되어 어둡게 보입니다. 이 밝기 차이로 물리적으로는 안 보이는 전기적 결함을 잡습니다."},
+  {q:"CD-SEM으로 선폭을 잴 때 시료가 대전되어 이미지가 흔들리는 현상은?", a:["차징(Charging)","블루밍","모아레","할레이션"], c:0,
+   e:"절연막 위에서 전자가 쌓이면 이미지 드리프트와 CD 오차가 생깁니다. 가속 전압을 낮추거나 프리도즈, 전하 중화 기법으로 완화하며, 레지스트 수축(Shrinkage)도 함께 관리해야 합니다."},
+  {q:"CD-SEM 측정 시 포토레지스트 패턴이 전자빔에 노출돼 줄어드는 현상을 부르는 말은?", a:["슈링크(Shrinkage)","에칭","리플로우","스웰링"], c:0,
+   e:"레지스트는 전자빔에 닿으면 수축해 측정할수록 CD가 작아집니다. 저도즈 조건, 1회 측정, 슈링크 보정 곡선으로 실제 CD를 추정합니다."},
+  {q:"OCD(스캐터로메트리) 계측의 특징으로 맞는 것은?", a:["시료를 파괴한다","주기 패턴에서만 가능하고 광학 모델(RCWA) 피팅으로 3D 형상을 구한다","임의 위치 단일 패턴을 잰다","해상도가 CD-SEM보다 좋다"], c:1,
+   e:"OCD는 테스트 패드 같은 반복 패턴에 빛을 쏘아 스펙트럼을 얻고 모델로 역산합니다. 비파괴·고속이지만 모델 정확도에 의존하므로 TEM 단면과 상관을 잡아 검증합니다."},
+  {q:"오버레이 계측 방식 중 IBO와 DBO의 차이는?", a:["IBO는 X선, DBO는 전자빔","IBO는 마크 이미지 위치를 비교하고, DBO는 회절 격자의 비대칭성으로 정렬 오차를 구한다","같은 방식이다","DBO는 패키징 전용"], c:1,
+   e:"IBO(Image Based)는 Box-in-Box 같은 마크를 이미지로 찍어 중심을 비교합니다. DBO(Diffraction Based)는 겹친 격자의 ±1차 회절광 비대칭으로 오버레이를 구해 정밀도가 높고 마크가 작습니다."},
+  {q:"오버레이 장비 정확도 지표로, 웨이퍼를 180° 돌려 측정해 광학계 비대칭 오차를 구하는 것은?", a:["TIS(Tool Induced Shift)","TMU","OEE","LWR"], c:0,
+   e:"TIS는 0°와 180° 측정값 차이의 절반으로, 장비 광학계가 만드는 계통 오차입니다. TMU(Total Measurement Uncertainty)는 정밀도·매칭·TIS 변동을 합친 전체 측정 불확도입니다."},
+  {q:"엘립소미터가 박막 두께를 구하는 방식으로 맞는 것은?", a:["직접 자로 잰다","반사광의 편광 변화(Ψ, Δ)를 광학 모델에 피팅해 두께·굴절률을 구한다","무게를 잰다","전류를 흘린다"], c:1,
+   e:"엘립소미터는 측정값 자체가 두께가 아니라 편광 변화이며, 막 구조와 재료의 광학 상수 모델을 세워 피팅합니다. 다층막은 모델이 복잡해져 레시피 개발이 계측 정확도를 좌우합니다."},
+  {q:"인라인 XRF 장비가 주로 계측하는 것은?", a:["금속막 두께와 조성","레지스트 CD","결함 좌표","오버레이"], c:0,
+   e:"XRF는 원소별 형광 X선 세기로 Cu·W·Co 같은 금속막 두께와 합금 조성을 비파괴로 측정합니다. 도금·스퍼터 공정 모니터링에 씁니다."},
+  {q:"AFM 계측 장비 운용에서 대표적인 관리 항목은?", a:["탐침(Tip) 마모와 교체 주기","EUV 광원 출력","레이저 파장","진공 펌프 오일"], c:0,
+   e:"AFM은 탐침이 표면을 훑기 때문에 마모되면 형상이 뭉개져 측정값이 틀어집니다. 기준 시료로 탐침 상태를 주기적으로 확인하고 교체하는 것이 정확도 관리의 핵심입니다."},
+  {q:"검사 레시피에서 감도(Sensitivity)를 높이면 나타나는 대표적인 부작용은?", a:["처리량 감소와 뉴슨스(오검출) 증가","웨이퍼 파손","장비 수명 단축","오버레이 악화"], c:0,
+   e:"감도를 높이려면 픽셀을 줄이고 문턱값을 낮춰야 하므로 스캔 시간이 늘고 노이즈까지 결함으로 잡힙니다. 킬러 결함 검출률과 뉴슨스율의 균형점을 찾는 것이 레시피 튜닝입니다."},
+  {q:"검사 장비가 결함이라고 잡았지만 실제로는 결함이 아닌 것을 부르는 말은?", a:["킬러 결함","뉴슨스(Nuisance)","시스터매틱 결함","익스커전"], c:1,
+   e:"뉴슨스율이 높으면 리뷰 SEM 부하가 커지고 진짜 결함이 묻힙니다. 레시피의 케어 에어리어 설정, 필터링, ADC(자동 결함 분류)로 걸러냅니다."},
+  {q:"검사 장비가 준 결함 좌표에서 고배율 SEM 이미지를 찍어 결함 종류를 분류하는 장비는?", a:["리뷰 SEM(DR-SEM)","CD-SEM","FIB","TEM"], c:0,
+   e:"리뷰 SEM은 파티클·스크래치·브릿지·보이드 등을 분류하고, AI 기반 ADC로 자동 분류율을 높입니다. 분류 결과가 결함 파레토가 되어 개선 우선순위를 정합니다."},
+  {q:"인라인 검사에서 모든 웨이퍼를 검사하지 않고 일부만 검사하는 이유와 방식은?", a:["장비가 없어서 무작위로 뺀다","검사 처리량 한계 때문에 공정 리스크에 따라 랏·웨이퍼 샘플링 비율을 정한다","고객이 원해서","비용과 무관하다"], c:1,
+   e:"첨단 팹은 검사 캐파가 제한적이라 공정 단계별 리스크, 장비 변경, 신제품 여부에 따라 샘플링 계획을 세웁니다. 이상 징후가 보이면 샘플링을 늘리는 동적 샘플링도 씁니다."},
+  {q:"같은 웨이퍼를 같은 종류 장비 여러 대에서 측정했을 때 값이 일치하도록 맞추는 활동은?", a:["툴 매칭(Tool Matching)","레시피 삭제","PM","번인"], c:0,
+   e:"장비마다 광학계·센서 차이로 값이 어긋나면 어느 장비를 거쳤느냐에 따라 공정 판정이 달라집니다. 기준 웨이퍼로 주기적으로 매칭하고 오프셋을 관리하는 것이 계측 설비 관리의 핵심입니다."},
+  {q:"계측 장비의 반복성(Repeatability)과 재현성(Reproducibility)을 평가하는 방법은?", a:["GR&R","FMEA","8D","OCD"], c:0,
+   e:"GR&R은 같은 시료를 반복 측정한 산포(반복성)와 작업자·장비·시간이 바뀔 때의 산포(재현성)를 분리해 측정 시스템이 공정 산포 대비 충분히 정밀한지 판정합니다."},
+  {q:"계측·검사 장비의 상태를 매일 확인하기 위해 기준 시료를 측정해 관리도로 추적하는 활동은?", a:["일일 QC(Daily Tool QC / Monitor)","마스크 교체","웨이퍼 폐기","레시피 삭제"], c:0,
+   e:"기준 웨이퍼(골든 웨이퍼)를 주기적으로 측정해 값이 관리 한계 안에 있는지 SPC로 추적합니다. 한계를 벗어나면 장비를 홀드하고 캘리브레이션·PM을 진행합니다."},
+  {q:"EUV 마스크 결함을 실제 노광 파장(13.5nm)으로 검사하는 방식을 부르는 말은?", a:["Actinic 검사","DUV 검사","AFM 검사","XRF 검사"], c:0,
+   e:"EUV 마스크의 다층막 위상 결함은 DUV 광으로는 잘 안 보여 같은 파장으로 검사하는 액티닉 검사가 필요합니다. 장비가 매우 고가라 E-beam 마스크 검사와 병행합니다."},
+  {q:"웨이퍼 가장자리나 뒷면 결함을 검사하는 이유는?", a:["의미 없다","에지·백사이드 파티클이 노광 포커스 불량과 척 오염을 일으켜 수율에 영향을 주기 때문","고객 요청 때문만","패키징 전용"], c:1,
+   e:"뒷면 파티클은 노광 척에서 웨이퍼를 들어올려 포커스·오버레이 오차를 만들고, 에지 결함은 막 박리로 이어집니다. 전용 에지·백사이드 검사 장비로 모니터링합니다."},
+  {q:"인라인 결함 검사 결과에서 웨이퍼 전체에 특정 공간 패턴(원형, 방사형, 특정 위치 반복)이 보이면 무엇을 의미하는가?", a:["무작위 파티클","특정 장비·공정 원인의 시스터매틱 결함 시그니처","검사기 오류","정상"], c:1,
+   e:"스핀 코팅 방사형, 척 핀 자국, 노광 샷 반복 같은 공간 시그니처는 원인 장비를 바로 가리킵니다. 결함 맵의 패턴 분석으로 원인 공정과 장비를 역추적하는 것이 수율 분석의 출발점입니다."},
+];
+
+const N = 10, LIMIT = 20;
+const $ = id => document.getElementById(id);
+
+// 웨이퍼 다이 생성: 원 안에 들어가는 셀만 다이로 사용
+const dieCells = [];
+(function buildWafer(){
+  const g = $("dies"), size = 8, cols = 12, off = (100 - cols*size)/2;
+  for(let r=0;r<cols;r++)for(let c=0;c<cols;c++){
+    const x = off + c*size, y = off + r*size;
+    const cx = x+size/2-50, cy = y+size/2-50;
+    if(Math.hypot(cx,cy) > 44) continue;
+    const rect = document.createElementNS("http://www.w3.org/2000/svg","rect");
+    rect.setAttribute("x",x);rect.setAttribute("y",y);
+    rect.setAttribute("width",size);rect.setAttribute("height",size);
+    rect.setAttribute("class","die");
+    g.appendChild(rect); dieCells.push(rect);
+  }
+})();
+
+let nick="", lastEntryId=null;
+let qs=[], idx=0, score=0, correct=0, timer=null, tLeft=LIMIT, answered=false, log=[], slots=[];
+
+const shuffle = a => { for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+
+function show(id){ ["start","quiz","result"].forEach(s=>$(s).classList.toggle("hidden", s!==id)); }
+
+function loadRank(){ try{ return JSON.parse(localStorage.getItem("miEqQuizRank")||"[]"); }catch(e){ return []; } }
+function saveRank(list){ try{ localStorage.setItem("miEqQuizRank", JSON.stringify(list)); }catch(e){} }
+function renderRank(){
+  const list = loadRank();
+  const t=$("rankTable");
+  if(!list.length){ t.innerHTML=`<tr><td colspan="3" class="empty">아직 기록이 없습니다.</td></tr>`; return; }
+  t.innerHTML = list.slice(0,10).map((r,i)=>{
+    const d=new Date(r.t), date=`${d.getMonth()+1}/${d.getDate()}`;
+    return `<tr class="${r.id===lastEntryId?"me":""}"><td>${i+1}</td><td>${esc(r.n)}<span class="sub">${r.y}% · ${date}</span></td><td>${r.s}점</td></tr>`;
+  }).join("");
+}
+const esc = t => t.replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+
+function start(){
+  const v=$("nickInput").value.trim();
+  if(!v){ $("nickErr").textContent="닉네임을 입력하면 시작할 수 있습니다."; $("nickInput").focus(); return; }
+  $("nickErr").textContent=""; nick=v;
+  try{ localStorage.setItem("miEqQuizNick", nick); }catch(e){}
+  qs = shuffle([...BANK]).slice(0,N).map(q=>{
+    const order = shuffle(q.a.map((_,i)=>i));
+    return {q:q.q, e:q.e, a:order.map(i=>q.a[i]), c:order.indexOf(q.c)};
+  });
+  idx=0; score=0; correct=0; log=[];
+  dieCells.forEach(d=>d.setAttribute("class","die"));
+  // 문제별로 할당할 다이 묶음
+  const pool = shuffle([...dieCells]); const per = Math.floor(pool.length/N);
+  slots = Array.from({length:N},(_,i)=>pool.slice(i*per,(i+1)*per));
+  $("scoreBadge").textContent = 0;
+  show("quiz"); render();
+}
+
+function render(){
+  answered=false;
+  const q = qs[idx];
+  $("progress").textContent = `${idx+1} / ${N}`;
+  $("qText").textContent = q.q;
+  $("explain").classList.add("hidden");
+  $("nextBtn").classList.add("hidden");
+  const box = $("opts"); box.innerHTML="";
+  q.a.forEach((t,i)=>{
+    const b=document.createElement("button"); b.className="opt";
+    b.innerHTML=`<span class="k">${"ABCD"[i]}</span><span>${t}</span>`;
+    b.onclick=()=>answer(i); box.appendChild(b);
+  });
+  slots[idx].forEach(d=>d.setAttribute("class","die cur"));
+  tLeft=LIMIT; tick(true);
+  clearInterval(timer); timer=setInterval(()=>tick(false),1000);
+}
+
+function tick(init){
+  if(!init) tLeft--;
+  $("timeLeft").textContent = `${tLeft}초`;
+  const bar=$("timerBar"); bar.style.width=(tLeft/LIMIT*100)+"%";
+  bar.classList.toggle("warn", tLeft<=5);
+  if(tLeft<=0) answer(-1);
+}
+
+function answer(i){
+  if(answered) return; answered=true; clearInterval(timer);
+  const q=qs[idx], ok = i===q.c;
+  const opts=[...document.querySelectorAll(".opt")];
+  opts.forEach((b,j)=>{ b.disabled=true; if(j===q.c) b.classList.add("right"); else if(j===i) b.classList.add("wrong"); });
+  let gain=0;
+  if(ok){ gain = 10 + Math.round(tLeft/LIMIT*5); correct++; }
+  score+=gain; $("scoreBadge").textContent=score;
+  slots[idx].forEach(d=>d.setAttribute("class","die "+(ok?"ok":"ng")));
+  const ex=$("explain");
+  ex.innerHTML = (i===-1 ? "<b>시간 초과.</b> " : ok ? `<b>정답! +${gain}점.</b> ` : "<b>오답.</b> ") + q.e;
+  ex.classList.remove("hidden");
+  log.push({q:q.q, ok, ans:q.a[q.c], mine: i===-1 ? "시간 초과" : q.a[i], e:q.e});
+  const nb=$("nextBtn"); nb.textContent = idx===N-1 ? "결과 보기" : "다음 문제";
+  nb.classList.remove("hidden"); nb.focus();
+}
+
+function finish(){
+  show("result");
+  const yieldPct = Math.round(correct/N*100);
+  $("resNick").textContent=nick;
+  $("finalScore").textContent=score;
+  lastEntryId = Date.now()+"-"+Math.random().toString(36).slice(2,6);
+  const list = loadRank();
+  list.push({id:lastEntryId, n:nick, s:score, y:yieldPct, t:Date.now()});
+  list.sort((a,b)=>b.s-a.s || a.t-b.t);
+  saveRank(list.slice(0,50));
+  renderRank();
+  $("stCorrect").textContent=`${correct}/${N}`;
+  $("stYield").textContent=yieldPct+"%";
+  let best=0; try{ best=Number(localStorage.getItem("miEqQuizBest")||0); if(score>best){best=score; localStorage.setItem("miEqQuizBest",best);} }catch(e){}
+  $("stBest").textContent=best;
+  const g = yieldPct>=90 ? ["S · MI 마스터","계측과 검사 원리를 완벽히 꿰고 있습니다. 이 웨이퍼는 결함 제로입니다."]
+        : yieldPct>=70 ? ["A · 시니어 MI","기본 개념은 확실합니다. 아래 틀린 문제 해설만 보면 완성입니다."]
+        : yieldPct>=50 ? ["B · 주니어 MI","장비 이름은 알지만 어떤 장비가 무엇을 재는지 헷갈립니다. 아래 해설로 정리해보세요."]
+        : ["C · 입문","아래 틀린 문제 해설을 읽고 한 판 더 돌려보세요. 수율은 검사 감도에서 나옵니다."];
+  $("grade").textContent=g[0]; $("comment").textContent=g[1];
+  const wrong = log.filter(l=>!l.ok), right = log.filter(l=>l.ok);
+  $("wrongTitle").textContent = wrong.length ? `틀린 문제 ${wrong.length}개 · 해설` : "틀린 문제 없음 — 전부 정답입니다";
+  $("wrongList").innerHTML = wrong.map(l=>`<li>
+      <div class="wq">${esc(l.q)}</div>
+      <div class="wa"><span class="x">내 답: ${esc(l.mine)}</span><span class="o">정답: ${esc(l.ans)}</span></div>
+      <div class="we">${esc(l.e)}</div></li>`).join("");
+  $("reviewList").innerHTML = right.map((l,i)=>`<li class="ok"><span class="m">O</span>${esc(l.q)}<br><span style="color:var(--muted)">정답: ${esc(l.ans)}</span></li>`).join("") || `<li class="ng">맞힌 문제가 없습니다.</li>`;
+}
+
+$("startBtn").onclick=start;
+$("retryBtn").onclick=()=>{ show("start"); $("nickInput").focus(); };
+$("clearRank").onclick=()=>{ if(confirm("이 기기의 순위 기록을 모두 지울까요?")){ saveRank([]); lastEntryId=null; renderRank(); } };
+$("nickInput").addEventListener("keydown",e=>{ if(e.key==="Enter") start(); });
+try{ $("nickInput").value = localStorage.getItem("miEqQuizNick")||""; }catch(e){}
+$("nextBtn").onclick=()=>{ idx++; idx<N ? render() : finish(); };
+$("shareBtn").onclick=async()=>{
+  const t=`${nick} · 반도체 MI 퀴즈 결과: ${score}점 (수율 ${Math.round(correct/N*100)}%, ${correct}/${N} 정답)`;
+  try{ await navigator.clipboard.writeText(t); $("shareBtn").textContent="복사됨"; setTimeout(()=>$("shareBtn").textContent="결과 복사",1500);}catch(e){ alert(t); }
+};
+document.addEventListener("keydown",e=>{
+  if($("quiz").classList.contains("hidden")) return;
+  const k="ABCD".indexOf(e.key.toUpperCase());
+  if(k>=0 && !answered) answer(k);
+  if(e.key==="Enter" && answered) $("nextBtn").click();
+});
+</script>
+</body>
+</html>
